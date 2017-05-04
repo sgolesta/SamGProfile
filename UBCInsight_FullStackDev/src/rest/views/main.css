@@ -1,0 +1,17 @@
+.filterRow {
+    padding: 5px;
+    border-width: 1px;
+    border-color: black;
+    border-style: solid;
+}
+
+.form {
+    padding: 5px;
+    border-width: 1px;
+    border-color: black;
+    border-style: solid;
+}
+
+.timeSlot {
+    font-weight: bold;
+}

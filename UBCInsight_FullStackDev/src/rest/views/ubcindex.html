@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html ng-app = "UBCExplorer">
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="main.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js">
+    </script>
+    <script type="text/javascript" src="app.js"></script>
+    <style> #map {height: 400px; width: 100%;}</style>
+
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBtCgQzQc1DUrniYQGkco0lvaNbQIq81s4&q=49.2606,-123.2460"></script>
+</head>
+
+<div class = "jumbotron">
+    <div class = "page-header">
+        <h1 style="color:#f0cd0e; text-indent: 50px"> UBC Explorer </h1>
+        <p style="text-indent: 60px"> Find info about courses and rooms at UBC </p>
+    </div>
+</div>
+
+<body class="list-group">
+<section class="tab" ng-controller="TabController as tab">
+    <div class = "container">
+        <div class = "row">
+            <div class = "col-sm-4">
+
+                <ul class="nav nav-pills">
+                    <li ng-class="{ active: tab.isSet(1) }">
+                        <a href ng-click="tab.setTab(1)"> <h4> Course Explorer </h4> </a></li>
+                </ul></div>
+
+            <div class= "col-sm-4">
+                <ul class = "nav nav-pills">
+                    <li ng-class="{ active: tab.isSet(2) }">
+                        <a href ng-click = "tab.setTab(2)"> <h4> Room Explorer </h4> </a></li>
+                </ul></div>
+            <div class= "col-sm-4">
+                <ul class = "nav nav-pills">
+                    <li ng-class="{ active: tab.isSet(3) }">
+                        <a href ng-click = "tab.setTab(3)"> <h4> Scheduler </h4> </a></li>
+                </ul></div>
+
+        </div>
+    </div>
+
+    <div class = "container" ng-controller="CourseController as main">
+        <div class = "row">
+            <div class = "col-sm-12">
+                <div ng-show ="tab.isSet(1)">
+                    <h4>Course Query</h4>
+
+                    <div class ="container">
+                        <div class ="row">
+
+
+                            <form class="form-inline">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" ng-model="groupSections.checked">
+                                        Group sections into courses
+                                    </label>
+                                </div>
+
+                                <div class="row">
+                                    <div class="form-group col-md-2">
+                                        <label>Property</label>
+                                    </div>
+                                    <div class="form-group col-md-1">
+                                        <label>Filter</label>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>Value</label>
+                                    </div>
+                                </div>
+
+
+                                <div class="row filterRow" ng-repeat="f in filters">
+                                    <div class="form-group col-md-2">
+                                        <select class="form-control" ng-model="f.property">
+                                            <option value="courses_dept">Department</option>
+                                            <option value="courses_size">Section size</option>
+                                            <option value="courses_id">Course number</option>
+                                            <option value="courses_title">Title</option>
+                                            <option value="courses_instructor">Instructor</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group col-md-1">
+                                        <select class="form-control" ng-show="isNumber(f)" ng-model="f.comp">
+                                            <option value="LT">&lt;</option>
+                                            <option value="GT">&gt;</option>
+                                            <option value="EQ">=</option>
+                                        </select>
+                                        <h4 ng-hide="isNumber(f)">IS</h4>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <input type="text" class="form-control" ng-model="f.value">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-danger" ng-click="filters.splice($index, 1)" ng-hide="$index === 0">
+                                            <span class="glyphicon glyphicon-remove"></span>
+                                        </button>
+                                    </div>
+                                </div>
+
+
+                            </form>
+
+
+                        </div>
+
+                        <div class="row">
+                            <form>
+                                <button type="button" class="btn btn-success" ng-click="addFilter()">
+                                    <span class="glyphicon glyphicon-plus"></span> Add Filter
+                                </button>
+
+                                <select ng-hide="filters.length === 1" ng-model="logic" ng-change="changeLogic()">
+                                    <option value="AND">AND</option>
+                                    <option value="OR">OR</option>
+                                </select>
+                            </form>
+                        </div>
+
+                        <div class="row">
+                            <h4>Sort by:</h4>
+                            <div class="row" ng-repeat="o in orderList track by $index">
+                                <select ng-model="o" ng-options="col for col in getOrderColumns()" ng-change="changeOrder(o, $index)">
+                                </select>
+                                <button type="button" class="btn btn-danger btn-xs" ng-click="orderList.splice($index, 1)">
+                                    <span class="glyphicon glyphicon-remove"></span>
+                                </button>
+                            </div>
+                            <button type="button" class="btn btn-success btn-sm" ng-click="addOrder()">
+                                <span class="glyphicon glyphicon-plus"></span> Add Order Column
+                            </button>
+                            <br/>
+                            Order direction:
+                            <select ng-model="orderDir">
+                                <option value="UP">UP</option>
+                                <option value="DOWN">DOWN</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <!--{{getQuery()}}-->
+                        </div>
+
+                        <button class="btn btn-default btn-lg" ng-click="sendQuery()">Query</button>
+                    </div>
+
+                    {{output}}
+
+                    <div id="render">
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th ng-repeat="col in columns">{{col.name}}</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr ng-repeat="x in queryData">
+                                <td ng-repeat="(key, value) in x">{{ value }}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class = "container" ng-controller = "RoomController as room">
+        <div class = "row">
+            <div class = "col-sm-12">
+                <div ng-show = "tab.isSet(2)">
+                    <h4>Room Query</h4>
+
+                    <div class = "container">
+                        <div class="row">
+
+                            <form class="form-inline">
+
+                                <div class="row">
+                                    <div class="form-group col-md-2">
+                                        <label>Property</label>
+                                    </div>
+                                    <div class="form-group col-md-1">
+                                        <label>Filter</label>
+                                    </div>
+                                    <div class="form-group col-md-9">
+                                        <label>Value</label>
+                                    </div>
+                                </div>
+
+
+                                <div class="row filterRow" ng-repeat="f in filters">
+                                    <div class="form-group col-md-2">
+                                        <select class="form-control" ng-model="f.property">
+                                            <option value="rooms_shortname">Building Name</option>
+                                            <option value="rooms_number">Room Number</option>
+                                            <option value="rooms_seats">Room Size</option>
+                                            <option value="rooms_type">Room Type</option>
+                                            <option value="rooms_furniture">Furniture Type</option>
+                                            <option value="rooms_location">Location</option>
+                                        </select>
+                                    </div>
+
+
+
+
+                                    <div class="form-group col-md-1">
+                                        <select class="form-control" ng-show="isNumber(f)" ng-model="f.comp">
+                                            <option value="LT">&lt;</option>
+                                            <option value="GT">&gt;</option>
+                                            <option value="EQ">=</option>
+                                        </select>
+                                        <h4 ng-hide="isNumber(f) || f.property === 'rooms_location'">IS</h4>
+                                        <h4 ng-show="f.property === 'rooms_location'">within</h4>
+                                    </div>
+
+
+                                    <div class="form-group col-md-9">
+                                        <input type="text" class="form-control" ng-model="f.value">
+                                        <span ng-show="f.property === 'rooms_location'">
+                                            meters of building
+                                            <input type="text" class="form-control" ng-model="f.building">
+                                        </span>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-danger" ng-click="filters.splice($index, 1)" ng-hide="$index === 0">
+                                            <span class="glyphicon glyphicon-remove"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+
+
+                        <div class="row">
+                            <form>
+                                <button type="button" class="btn btn-success" ng-click="addFilter()">
+                                    <span class="glyphicon glyphicon-plus"></span> Add Filter
+                                </button>
+
+                                <select ng-hide="filters.length === 1" ng-model="logic" ng-change="changeLogic()">
+                                    <option value="AND">AND</option>
+                                    <option value="OR">OR</option>
+                                </select>
+                            </form>
+                        </div>
+
+
+                        <div class="row">
+                            <h4>Sort by:</h4>
+                            <div class="row" ng-repeat="o in orderList">
+                                <select ng-model="o">
+
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!--{{getQuery()}}-->
+                        </div>
+
+                        <button class="btn btn-default btn-lg" ng-click="sendQuery()">Query</button>
+                        <button class ="btn btn-default btn-lg" data-toggle ="modal" data-target="#mapModal" ng-click="initialize()"> Map it </button>
+                    </div>
+
+
+
+                    <!--Modal-->
+                    <div id="mapModal" class = "modal fade">
+                        <div class ="modal-dialog">
+
+                            <!--Modal Content-->
+                            <div class="modal-content">
+                                <div class="header">
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                    <h4 class="modal-title"> UBC Area </h4>
+                                </div>
+                                <div class="modal-body">
+                                    <h3>Nearby buildings</h3>
+
+                                    <div id="map"></div>
+
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+
+                </div>
+
+
+                {{output}}
+
+                <div id="render">
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th ng-repeat="col in columns">{{col.name}}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="x in queryData">
+                            <td ng-repeat="(key, value) in x">{{ value }}</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+    <div ng-show ="tab.isSet(3)">
+
+    <div class = "container" ng-controller="ScheduleController as main">
+        <div class = "row">
+            <div class = "col-sm-12">
+
+                    <h4>Scheduler</h4>
+
+                    <div class ="container">
+                        <div class ="row">
+
+
+                            <form class="form-inline">
+
+                                <div class="row">
+                                    <div class="form-group col-md-2">
+                                        <label>Property</label>
+                                    </div>
+                                    <div class="form-group col-md-1">
+                                        <label>Filter</label>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>Value</label>
+                                    </div>
+                                </div>
+
+
+                                <div class="row filterRow" ng-repeat="f in courseFilters">
+                                    <div class="form-group col-md-2">
+                                        <select class="form-control" ng-model="f.property">
+                                            <option value="courses_dept">Department</option>
+                                            <option value="courses_id">Course number</option>
+                                        </select>
+                                    </div>
+
+
+
+                                        <div class="form-group col-md-1">
+                                        <h4>IS</h4>
+                                    </div>
+
+
+                                    <div class="form-group col-md-4">
+                                        <input type="text" class="form-control" ng-model="f.value">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-danger" ng-click="courseFilters.splice($index, 1)" ng-hide="$index === 0">
+                                            <span class="glyphicon glyphicon-remove"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+
+                        <div class="row">
+                            <form>
+                                <button type="button" class="btn btn-success" ng-click="addCourseFilter()">
+                                    <span class="glyphicon glyphicon-plus"></span> Add Filter
+                                </button>
+
+                                <select ng-hide="courseFilters.length === 1" ng-model="courseLogic">
+                                    <option value="AND">AND</option>
+                                    <option value="OR">OR</option>
+                                </select>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+          <div class = "container">
+              <div class="row">
+                  <div class="col-sm-12">
+                      <h4>Room Selector</h4>
+                      <form class="form-inline">
+
+                          <div class="row">
+                              <div class="form-group col-md-2">
+                                  <label>Property</label>
+                              </div>
+                              <div class="form-group col-md-1">
+                                  <label>Filter</label>
+                              </div>
+                              <div class="form-group col-md-9">
+                                  <label>Value</label>
+                              </div>
+                          </div>
+
+
+                          <div class="row filterRow" ng-repeat="f in roomFilters">
+                              <div class="form-group col-md-2">
+                                  <select class="form-control" ng-model="f.property">
+                                      <option value="rooms_shortname">Building Name</option>
+                                      <option value="rooms_location">Location</option>
+                                  </select>
+                              </div>
+
+
+
+
+                              <div class="form-group col-md-1">
+                                  <h4 ng-hide="f.property === 'rooms_location'">IS</h4>
+                                  <h4 ng-show="f.property === 'rooms_location'">within</h4>
+                              </div>
+
+
+                              <div class="form-group col-md-7">
+                                  <input type="text" class="form-control" ng-model="f.value">
+                                  <span ng-show="f.property === 'rooms_location'">
+                                            meters of building
+                                            <input type="text" class="form-control" ng-model="f.building">
+                                        </span>
+                              </div>
+
+                              <div class="col-md-1">
+                                  <button type="button" class="btn btn-danger" ng-click="roomFilters.splice($index, 1)" ng-hide="$index === 0">
+                                      <span class="glyphicon glyphicon-remove"></span>
+                                  </button>
+                              </div>
+                          </div>
+                      </form>
+                  </div>
+
+
+
+                  <div class="row">
+                      <form>
+                          <button type="button" class="btn btn-success" ng-click="addRoomFilter()">
+                              <span class="glyphicon glyphicon-plus"></span> Add Filter
+                          </button>
+
+                          <select ng-hide="roomFilters.length === 1" ng-model="roomLogic" ng-change="changeLogic()">
+                              <option value="AND">AND</option>
+                              <option value="OR">OR</option>
+                          </select>
+                      </form>
+                  </div>
+
+                  <button class="btn btn-default btn-lg" ng-click="getAllQueries()">Select</button>
+                  <br/>
+                  {{output}}
+                    <br/>
+                  <!--Course size query:-->
+                    <!--<br/>-->
+                  <!--{{getRoomQuery()}}-->
+
+                  <p><strong>Quality:</strong>{{missedSections / totalSections}}</p>
+                  <p>Missed sections: {{missedSections}}</p>
+                  <p>Total sections: {{totalSections}}</p>
+
+                  <div class="row">
+                      <div class="col-md-1" style="padding-right: 150px">
+                          <div class="btn-group-vertical" role="group">
+                              <button type="button" class="btn btn-default" ng-repeat="x in schedules" ng-click="setSelectedSchedule(x)">{{x.roomName}}</button>
+                          </div>
+                      </div>
+                      <div class="col-md-10" ng-hide="selectedSchedule == null">
+                          <div class="row">
+                              <span>Number of seats: {{selectedSchedule.seats}}</span>
+                          </div>
+                          <div class="row">
+                              <div class="col-md-6">
+                                  <h4>MWF</h4>
+                                  <br/>
+                                  <span class="timeSlot">8 - 9</span>
+                                  <br/>
+                                  {{selectedSchedule.MWF[0]}}
+                                  <br/>
+                                  <span class="timeSlot">9 - 10</span>
+                                  <br/>
+                                  {{selectedSchedule.MWF[1]}}
+                                  <br/>
+                                  <span class="timeSlot">10 - 11</span>
+                                  <br/>
+                                  {{selectedSchedule.MWF[2]}}
+                                  <br/>
+                                  <span class="timeSlot">11 - 12</span>
+                                  <br/>
+                                  {{selectedSchedule.MWF[3]}}
+                                  <br/>
+                                  <span class="timeSlot">12 - 1</span>
+                                  <br/>
+                                  {{selectedSchedule.MWF[4]}}
+                                  <br/>
+                                  <span class="timeSlot">1 - 2</span>
+                                  <br/>
+                                  {{selectedSchedule.MWF[5]}}
+                                  <br/>
+                                  <span class="timeSlot">2 - 3</span>
+                                  <br/>
+                                  {{selectedSchedule.MWF[6]}}
+                                  <br/>
+                                  <span class="timeSlot">3 - 4</span>
+                                  <br/>
+                                  {{selectedSchedule.MWF[7]}}
+                                  <br/>
+                                  <span class="timeSlot">4 - 5</span>
+                                  <br/>
+                                  {{selectedSchedule.MWF[8]}}
+                                  <br/>
+                              </div>
+                              <div class="col-md-6">
+                                  <h4>TuTh</h4>
+                                  <br/>
+                                  <span class="timeSlot">8 - 9:30</span>
+                                  <br/>
+                                  {{selectedSchedule.TT[0]}}
+                                  <br/>
+                                  <span class="timeSlot">9:30 - 11</span>
+                                  <br/>
+                                  {{selectedSchedule.TT[1]}}
+                                  <br/>
+                                  <span class="timeSlot">11 - 12:30</span>
+                                  <br/>
+                                  {{selectedSchedule.TT[2]}}
+                                  <br/>
+                                  <span class="timeSlot">12:30 - 2</span>
+                                  <br/>
+                                  {{selectedSchedule.TT[3]}}
+                                  <br/>
+                                  <span class="timeSlot">2 - 3:30</span>
+                                  <br/>
+                                  {{selectedSchedule.TT[4]}}
+                                  <br/>
+                                  <span class="timeSlot">3:30 - 5</span>
+                                  <br/>
+                                  {{selectedSchedule.TT[5]}}
+                                  <br/>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  <div>
+                      <table class="table">
+                          <thead>
+                          <tr>
+                              <th>Course name</th>
+                              <th>Course size</th>
+                              <th>Course sections</th>
+                          </tr>
+                          </thead>
+                          <tbody>
+                          <tr ng-repeat="c in courses">
+                              <td>{{c.name}}</td>
+                              <td>{{c.size}}</td>
+                              <td>{{c.sections}}</td>
+                          </tr>
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+              </div>
+          </div>
+      </div>
+
+</section>
+
+
+
+</body>
+</html>
